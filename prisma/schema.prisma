@@ -7,13 +7,90 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id          String   @id @default(uuid())
-  email       String   @unique
-  username    String?
-  avatar      String?
-  isVerified  Boolean  @default(false)
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  VOICE
+}
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+enum CallType {
+  AUDIO
+  VIDEO
+}
+
+enum CallStatus {
+  MISSED
+  REJECTED
+  COMPLETED
+  ONGOING
+}
+
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  name       String?
+  avatar     String?
+  status     String?
+
+  createdAt  DateTime @default(now())
+
+  messages   Message[]
+  callsMade  Call[]   @relation("Caller")
+  callsRecv  Call[]   @relation("Receiver")
+
+  chatMembers ChatMember[]
+}
+
+model OtpCode {
+  id         String   @id @default(uuid())
+  email      String
+  otp        String
+  expiresAt  DateTime
+}
+
+model Chat {
+  id          String       @id @default(uuid())
+  createdAt   DateTime     @default(now())
+
+  members     ChatMember[]
+  messages    Message[]
+}
+
+model ChatMember {
+  chatId      String
+  userId      String
+
+  chat        Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([chatId, userId])
+}
+
+model Message {
+  id          String      @id @default(uuid())
+
+  chatId      String
+  senderId    String
+
+  type        MessageType
+  content     String      @db.LongText
+
+  createdAt   DateTime    @default(now())
+
+  chat        Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender      User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model Call {
+  id          String      @id @default(uuid())
+
+  callerId    String
+  receiverId  String
+
+  type        CallType
+  status      CallStatus
+
+  caller      User @relation("Caller", fields: [callerId], references: [id], onDelete: Cascade)
+  receiver    User @relation("Receiver", fields: [receiverId], references: [id], onDelete: Cascade)
 }
